@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { GoogleIcon } from '../constants';
+import { userService } from '../lib/database';
 
 const UserIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -28,31 +29,34 @@ const EyeOffIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface LoginProps {
     onLoginSuccess: (user: User) => void;
-    users: User[];
 }
 
-const Login: React.FC<LoginProps> = ({ onLoginSuccess, users }) => {
+const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
-        // Simulate API call
-        setTimeout(() => {
-            const user = users.find(u => u.email === email && u.password === password);
+        try {
+            const user = await userService.signIn(email, password);
             if (user) {
-                onLoginSuccess(user);
+                onLoginSuccess(user as User);
             } else {
-                setError('Username atau kata sandi salah.');
+                // This case should ideally not be hit if signIn throws an error on failure
+                setError('Login failed. Please check your credentials.');
             }
+        } catch (err: any) {
+            console.error("Login error:", err);
+            setError(err.message || 'Username atau kata sandi salah.');
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
 
     return (
