@@ -9,6 +9,48 @@ type ProjectRow = Tables['projects']['Row']
 
 // CRUD Operations for Users
 export const userService = {
+  async signIn(email, password) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) throw error;
+        if (!data.user) throw new Error("Sign in successful, but no user data returned.");
+
+        // Now, fetch the user profile from the 'users' table
+        const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+
+        if (profileError) throw profileError;
+        if (!userProfile) throw new Error("User authenticated but profile not found in database.");
+
+        return userProfile
+    },
+    async signOut() {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+    },
+    async getCurrentUser() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return null;
+
+        const { data: userProfile, error: profileError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profileError) {
+            console.error("Error fetching user profile:", profileError);
+            return null;
+        }
+
+        return userProfile;
+    },
   async getAll(vendorId: string) {
     const { data, error } = await supabase
       .from('users')
@@ -62,18 +104,6 @@ export const userService = {
     
     if (error) throw error
   },
-
-  async authenticate(email: string, password: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .eq('password', password)
-      .single()
-    
-    if (error) return null
-    return data
-  }
 }
 
 // CRUD Operations for Clients
